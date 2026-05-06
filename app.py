@@ -10,32 +10,32 @@ from utils.image_io import load_from_sample, load_from_upload
 def main():
     st.title("🔍 Feature Extraction Explorer")
 
-    #sidebar
-    sidebar = st.sidebar
-    input_selector = sidebar.radio(
-                            "Image input",
-                            ("Upload file", "Sample images")
-                            )
-    algo_selector = sidebar.selectbox(
-                            "Algorithm",
-                            ("Canny", "Harris", "SIFT")
-                            )
-    with sidebar:
+    # sidebar
+    with st.sidebar:
+        input_selector = st.radio(
+                                "Image input",
+                                ("Upload file", "Sample images")
+                                )
+        algo_selector = st.selectbox(
+                                "Algorithm",
+                                ("Canny", "Harris", "SIFT")
+                                )
         st.info("Parameters will appear here")
-    sidebar.button("Run")
+        st.button("Run")
      
-    #main area 
+    # main area 
     left_column, right_column = st.columns(2)
     with left_column:
         # st.info("Original image placeholder")
         if input_selector =="Upload file":
-            uploaded_image: UploadedFile = st.file_uploader(
+            uploaded_image: UploadedFile | None = st.file_uploader(
                     "Uploaded image",
                     type=["jpg", "png"]
                     )
             if uploaded_image is not None:
-                processed_image: np.ndarray = load_from_upload(uploaded_image)
-                st.image(processed_image)
+                processed_image: np.ndarray | None = load_from_upload(uploaded_image)
+                if processed_image is not None:
+                    st.image(processed_image)
         else:
             sample_selector = st.selectbox(
                     "Sample images",
@@ -44,17 +44,20 @@ def main():
             # st.info("Sample image placeholder")
             match sample_selector:
                 case "Building":
-                    sample_image: np.ndarray = load_from_sample("Building.jpeg")
+                    sample_image = load_from_sample("Building.jpeg")
                 case "Goat with glasses":
-                    sample_image: np.ndarray = load_from_sample("goat.JPG")
-            st.image(sample_image)
+                    sample_image = load_from_sample("goat.JPG")
+                case _:
+                    sample_image = None
+            if sample_image is not None:
+                st.image(sample_image)
         
     with right_column:
         st.info("Processed output placeholder")
 
-    #placeholders for dignostic and info selection
-    diognostic_viewer = st.info("Diognostic viewer")
-    metrics_info = st.info("Metrics info")
+    # placeholders for dignostic and info selection
+    st.info("Diagnostic viewer") # TODO
+    st.info("Metrics info") # TODO
 
 
 
