@@ -1,10 +1,21 @@
 import io
 import os
-from PIL import UnidentifiedImageError
-import PIL.Image
+from PIL import UnidentifiedImageError, Image
 import numpy as np
+import streamlit as st
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
+def _normalize(image_array: np.ndarray) -> np.ndarray:
+    """
+    helper function that normalizes the image array (values in [0, 1])
+    """
+    denom: np.float32 = (image_array.max() - image_array.min())
+    if denom > 0:
+        normalized: np.ndarray = (image_array - image_array.min()) / denom
+    else:
+        normalized: np.ndarray = np.zeros_like(image_array)
+    return normalized
+        
 def load_from_upload(uploaded_file: None | UploadedFile) -> np.ndarray | None:
     """
     Args:
@@ -17,29 +28,23 @@ def load_from_upload(uploaded_file: None | UploadedFile) -> np.ndarray | None:
     raw_bytes: bytes = uploaded_file.getvalue()
 
     try:
-        with PIL.Image.open(io.BytesIO(raw_bytes)) as img:
+        with Image.open(io.BytesIO(raw_bytes)) as img:
             if img.mode != "RGB":
                 img = img.convert("RGB")
             image_array: np.ndarray = np.array(img, dtype=np.float32)
     except UnidentifiedImageError:
-        print("Error: File isn't of the correct format")
+        st.error("Error: File isn't of the correct format")
         return None
     except TypeError:
-        print("Error: File isn't in the correct format")
+        st.error("Error: File isn't in the correct format")
         return None
     except ValueError:
-        print("Error: something went wrong in the file characteristics")
+        st.error("Error: something went wrong in the file characteristics")
         return None
 
-    denom: float = (image_array.max() - image_array.min())
-    if denom > 0:
-        normalized: np.ndarray = (image_array - image_array.min()) / denom
-    else:
-        normalized: np.ndarray = np.zeros_like(image_array)
-        
-    return normalized
+    return _normalize(image_array)
     
-def load_from_sample(image_name: str | None = None) -> np.ndarray:
+def load_from_sample(image_name: str | None = None) -> np.ndarray | None:
     """
     Args:
         image_name: name of one of the sample image.
@@ -52,29 +57,23 @@ def load_from_sample(image_name: str | None = None) -> np.ndarray:
         image_path: str = os.path.join("./sample_images/", image_name)
 
     try:
-        with PIL.Image.open(image_path) as img:
+        with Image.open(image_path) as img:
             if img.mode != "RGB":
                 img = img.convert("RGB")
             image_array: np.ndarray = np.array(img, dtype=np.float32)
     except FileNotFoundError:
-        print("Error: File not found")
+        st.error("Error: File not found")
         return None
     except UnidentifiedImageError:
-        print("Error: File isn't of the correct format")
+        st.error("Error: File isn't of the correct format")
         return None
     except TypeError:
-        print("Error: File isn't in the correct format")
+        st.error("Error: File isn't in the correct format")
         return None
     except ValueError:
-        print("Error: something went wrong in the file characteristics")
+        st.error("Error: something went wrong in the file characteristics")
         return None
 
-    denom: float = (image_array.max() - image_array.min())
-    if denom > 0:
-        normalized: np.ndarray = (image_array - image_array.min()) / denom
-    else:
-        normalized: np.ndarray = np.zeros_like(image_array)
-        
-    return normalized
+    return _normalize(image_array)
     
 
