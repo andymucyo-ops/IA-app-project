@@ -33,13 +33,13 @@ def main():
                     type=["jpg", "png"]
                     )
             if uploaded_image is not None:
-                processed_image: np.ndarray | None = load_from_upload(uploaded_image)
-                if processed_image is not None:
-                    st.image(processed_image)
+                image_output: np.ndarray | None = load_from_upload(uploaded_image)
+                if image_output is not None:
+                    st.image(image_output)
         else:
             sample_selector = st.selectbox(
                     "Sample images",
-                    ("Building", "Goat with glasses")
+                    ("-- Chose your sample", "Building", "Goat with glasses")
                     )
             # st.info("Sample image placeholder")
             match sample_selector:
