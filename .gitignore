@@ -10,4 +10,4 @@ wheels/
 .venv
 
 #agent directives
-AGENT.md
+AGENTS.md
