@@ -11,14 +11,15 @@ def detect_harris(
         ksize: int = 3,
         k: float = 0.04,
         threshold_ratio: float = 0.01
-        ) -> list[tuple[int, int]]:
+        ) -> tuple[list[tuple[int, int]], np.ndarray]:
         """    
         Detect Harris corners in a grayscale float32 image.
         Returns    
         -------    
-        np.ndarray        
+        np.ndarray a grid containing the normalized values of each pixel 
         List of tuple (int, int) representing the location of the corners
         """
+        # image_f32 = cv2.(image.astype(np.float32),cv2.COLOR_GRAY2RGB)
         image_f32 = _RGB_to_grayscale(image)
         harris_response_map = cv2.cornerHarris(image_f32, block_size, ksize, k) 
         threshold = threshold_ratio * harris_response_map.max()
@@ -27,23 +28,4 @@ def detect_harris(
         rows, cols= np.where(corner_mask)
         keypoints = list(zip(cols, rows))
 
-        return keypoints
-
-def draw_keypoints(
-        image: np.ndarray,
-        keypoints: list[tuple[int, int]],
-        color: tuple[int, int, int] = (255, 0, 0),
-        radius: int = 2 
-        ) -> np.ndarray:
-    if image.ndim == 2:
-        canvas: np.ndarray = cv2.cvtColor(
-                (image * 255).astype(np.uint8),
-                cv2.COLOR_GRAY2RGB
-                )
-    else:
-        canvas: np.ndarray = (image * 255).astype(np.uint8).copy()
-
-    for (x, y) in keypoints:
-        cv2.circle(canvas, (x, y), radius, color, thickness=1)
-
-    return canvas
+        return keypoints, harris_response_map

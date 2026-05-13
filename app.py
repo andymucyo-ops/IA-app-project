@@ -2,7 +2,8 @@ import numpy as np
 import streamlit as st
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
-from processing.detectors import detect_harris, draw_keypoints
+from processing.detectors import detect_harris
+from utils.visualization import draw_keypoints
 from utils.image_io import load_from_sample, load_from_upload
 
 
@@ -27,11 +28,35 @@ def main():
                 pass
             case "Harris":
                 st.subheader("Parameters")
-                block_size: int = st.slider("Block size", min_value=2, max_value=10, value=2)
-                ksize: int = st.slider("ksize", min_value=3, max_value=7, value=3, step=2)
-                k: float = st.slider("k", min_value=0.01, max_value=0.10, value=0.04)
-                threshold_ratio: float = st.slider("Threshold ratio", min_value=0.01, max_value=0.1, value=0.01)
-                radius: int = st.slider("Radius", min_value=2, max_value=10)
+                block_size: int = st.slider(
+                        "Block size", 
+                        min_value=2, 
+                        max_value=10, 
+                        value=2
+                        )
+                ksize: int = st.slider("ksize", 
+                                       min_value=3, 
+                                       max_value=7, 
+                                       value=3, 
+                                       step=2
+                                       )
+                k: float = st.slider(
+                        "k", 
+                        min_value=0.01, 
+                        max_value=0.10, 
+                        value=0.04
+                        )
+                threshold_ratio: float = st.slider(
+                        "Threshold ratio", 
+                        min_value=0.01, 
+                        max_value=0.1, 
+                        value=0.01
+                        )
+                radius: int = st.slider(
+                        "Radius", 
+                        min_value=2, 
+                        max_value=10
+                        )
             case "SIFT":
                 pass
         run_button = st.button("Run", type="primary")
@@ -56,7 +81,8 @@ def main():
                         "Building", 
                         "Goat with glasses", 
                         "Building 2",
-                        "Checkered pattern"
+                        "Checkerboard",
+                        # "Polygones"
                         )
                     )
             # st.info("Sample image placeholder")
@@ -67,15 +93,19 @@ def main():
                     input_image = load_from_sample("goat.JPG")
                 case "Building 2":
                     input_image = load_from_sample("building2.jpg")
-                case "Checkered pattern":
-                    input_image = load_from_sample("Checkered_pattern.jpg")
+                case "Checkerboard":
+                    input_image = load_from_sample("Checkerboard.jpg")
+                # case "Polygones":
+                    # input_image = load_from_sample("polygones.jpg")
                 case _:
                     input_image = None
             if input_image is not None:
                 st.image(input_image)
         
     with right_column:
-        if run_button and algo_selector == "Harris":
+
+        st.subheader("Processed output")
+        if algo_selector == "Harris" and run_button:
             if input_image is None:
                 st.error("Please select or upload an image")
             else:
