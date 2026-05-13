@@ -5,6 +5,15 @@ import numpy as np
 import streamlit as st
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
+MAX_DIMENSION = 1024  # configurable constant at top of file
+
+def _resize_if_needed(img: Image.Image) -> Image.Image:
+    w, h = img.size
+    if max(w, h) > MAX_DIMENSION:
+        scale = MAX_DIMENSION / max(w, h)
+        img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+    return img
+
 def _normalize(image_array: np.ndarray) -> np.ndarray:
     """
     helper function that normalizes the image array (values in [0, 1])
@@ -31,6 +40,7 @@ def load_from_upload(uploaded_file: None | UploadedFile) -> np.ndarray | None:
         with Image.open(io.BytesIO(raw_bytes)) as img:
             if img.mode != "RGB":
                 img = img.convert("RGB")
+            img = _resize_if_needed(img)
             image_array: np.ndarray = np.array(img, dtype=np.float32)
     except UnidentifiedImageError:
         st.error("Error: File isn't of the correct format")
@@ -60,6 +70,7 @@ def load_from_sample(image_name: str | None = None) -> np.ndarray | None:
         with Image.open(image_path) as img:
             if img.mode != "RGB":
                 img = img.convert("RGB")
+            img = _resize_if_needed(img)
             image_array: np.ndarray = np.array(img, dtype=np.float32)
     except FileNotFoundError:
         st.error("Error: File not found")
