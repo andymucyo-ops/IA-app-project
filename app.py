@@ -130,18 +130,15 @@ def main():
                                         (
                                             "-- Choose your sample", 
                                             "Building", 
-                                            "Checkerboard",
-                                            "Goat with glasses"
+                                            "Checkered Flag"
                                             )
                                         )
                     image_key = sample_selector
                     match sample_selector:
                         case "Building":
                             input_image = load_from_sample("Building2.jpg")
-                        case "Checkerboard":
-                            input_image = load_from_sample("Checkerboard.jpg")
-                        case "Goat with glasses":
-                            input_image = load_from_sample("goat.JPG")
+                        case "Checkered Flag":
+                            input_image = load_from_sample("Checkered_flag.jpg")
                         case _:
                             input_image = None
                     if input_image is not None:
