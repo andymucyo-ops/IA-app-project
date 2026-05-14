@@ -1,10 +1,21 @@
-import cv2
+import cv2 as cv
 import numpy as np
 
 def _RGB_to_grayscale(image: np.ndarray) -> np.ndarray:
     grayscale = 0.299 * image[:,:,0] + 0.587 * image[:,:,1] + 0.114 * image[:,:,2]
     return grayscale.astype(np.float32)
 
+def _normalize(image_array: np.ndarray) -> np.ndarray:
+    """
+    helper function that normalizes the image array (values in [0, 1])
+    """
+    denom: np.float32 = (image_array.max() - image_array.min())
+    if denom > 0:
+        normalized: np.ndarray = (image_array - image_array.min()) / denom
+    else:
+        normalized: np.ndarray = np.zeros_like(image_array)
+    return normalized
+ 
 def detect_harris(
         image: np.ndarray,
         block_size: int = 2,
@@ -19,9 +30,8 @@ def detect_harris(
         np.ndarray a grid containing the normalized values of each pixel 
         List of tuple (int, int) representing the location of the corners
         """
-        # image_f32 = cv2.(image.astype(np.float32),cv2.COLOR_GRAY2RGB)
         image_f32 = _RGB_to_grayscale(image)
-        harris_response_map = cv2.cornerHarris(image_f32, block_size, ksize, k) 
+        harris_response_map = cv.cornerHarris(image_f32, block_size, ksize, k) 
         threshold = threshold_ratio * harris_response_map.max()
         corner_mask = harris_response_map > threshold
 
@@ -29,3 +39,61 @@ def detect_harris(
         keypoints = list(zip(cols, rows))
 
         return keypoints, harris_response_map
+
+def detect_canny(
+        image: np.ndarray,
+        sigma: float,
+        low_threshold: float,
+        high_threshold: float
+        ) -> dict[str,np.ndarray]:
+    """
+    Detects edges of object on a Gray uint8 image represented as np.ndarray
+    Returns.
+    -------
+    Dictonnary of np.ndarray representing each step of Canny edge detection:
+    {
+        "blurred":   np.ndarray,   after Gaussian blur, shape (H, W), uint8
+        "gradient":  np.ndarray,   gradient magnitude map, shape (H, W), uint8
+        "nms":       np.ndarray,   after non-maximum suppression, shape (H, W), uint8
+        "edges":     np.ndarray,   final binary edge map, shape (H, W), uint8
+    }
+    """
+    gray: np.ndarray = _RGB_to_grayscale(image)
+    uint8_gray: np.ndarray = (gray * 255).astype(np.uint8) 
+
+    #Gaussian blur:
+    kernel_size: int = 2 * int(np.ceil(sigma * 3)) + 1
+    blurred: np.ndarray = cv.GaussianBlur(uint8_gray, (kernel_size, kernel_size), sigma)
+
+    #Gradient magnitude 
+    grad_x: np.ndarray = cv.Sobel(
+            blurred, 
+            cv.CV_64F, 
+            dx=1,
+            dy=0,
+            ksize=3
+            )
+    grad_y: np.ndarray = cv.Sobel(
+            blurred, 
+            cv.CV_64F, 
+            dx=0,
+            dy=1,
+            ksize=3
+            )
+    gradient_magnitude = np.hypot(grad_x, grad_y)
+    gradient_uint8: np.ndarray = (_normalize(gradient_magnitude) * 255).astype(np.uint8) 
+
+    #NMS + Hysteresis
+    edges: np.ndarray = cv.Canny(blurred, low_threshold, high_threshold)
+
+    #approximate NMS intermediary since cv.Canny directly applies NMS and Hysteresis
+    nms_approx: np.ndarray = (gradient_magnitude > low_threshold).astype(np.uint8) * 255
+
+
+    return {
+        "blurred": blurred,
+        "gradient": gradient_uint8,
+        "nms": nms_approx,
+        "edges": edges,
+        }
+

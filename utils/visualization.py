@@ -1,5 +1,5 @@
 import numpy as np
-import cv2
+import cv2 as cv
 
 def draw_keypoints(
         image: np.ndarray,
@@ -14,14 +14,14 @@ def draw_keypoints(
     canvas: input image with circles drawn on the detected corners 
     """
     if image.ndim == 2:
-        canvas: np.ndarray = cv2.cvtColor(
+        canvas: np.ndarray = cv.cvtColor(
                 (image * 255).astype(np.uint8),
-                cv2.COLOR_GRAY2RGB
+                cv.COLOR_GRAY2RGB
                 )
     else:
         canvas: np.ndarray = (image * 255).astype(np.uint8).copy()
 
     for (x, y) in keypoints:
-        cv2.circle(canvas, (x, y), radius, color, thickness=2)
+        cv.circle(canvas, (x, y), radius, color, thickness=2)
 
     return canvas
