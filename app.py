@@ -11,6 +11,13 @@ from utils.image_io import load_from_sample, load_from_upload
 def main():
     st.title("🔍 Feature Extraction Explorer")
 
+    if "has_run" not in st.session_state:
+        st.session_state.has_run = False
+    if "last_image_key" not in st.session_state:
+        st.session_state.last_image_key = None
+    if "last_algo" not in st.session_state:
+        st.session_state.last_algo = None
+    
     # sidebar
     input_image = None
     with st.sidebar:
@@ -69,47 +76,65 @@ def main():
                     "Uploaded image",
                     type=["jpg", "png"]
                     )
+            image_key = uploaded_image.name if uploaded_image is not None else None
             if uploaded_image is not None:
                 input_image: np.ndarray | None = load_from_upload(uploaded_image)
                 if input_image is not None:
                     st.image(input_image)
         else:
-            sample_selector = st.selectbox(
+            match algo_selector:
+                case "Harris":
+                    sample_selector = st.selectbox(
                     "Sample images",
                     (
                         "-- Choose your sample", 
                         "Building", 
-                        "Goat with glasses", 
-                        "Building 2",
                         "Checkerboard",
-                        # "Polygones"
                         )
                     )
-            # st.info("Sample image placeholder")
-            match sample_selector:
-                case "Building":
-                    input_image = load_from_sample("Building.jpeg")
-                case "Goat with glasses":
-                    input_image = load_from_sample("goat.JPG")
-                case "Building 2":
-                    input_image = load_from_sample("building2.jpg")
-                case "Checkerboard":
-                    input_image = load_from_sample("Checkerboard.jpg")
-                # case "Polygones":
-                    # input_image = load_from_sample("polygones.jpg")
-                case _:
-                    input_image = None
-            if input_image is not None:
-                st.image(input_image)
-        
-    with right_column:
+                    match sample_selector:
+                        case "Building":
+                            input_image = load_from_sample("Building.jpeg")
+                        case "Checkerboard":
+                            input_image = load_from_sample("Checkerboard.jpg")
+                        case _:
+                            input_image = None
+                    if input_image is not None:
+                        st.image(input_image)
+       
+                case "Canny":
+                    st.info("Canny detection not implemented yet")
 
-        st.subheader("Processed output")
-        if algo_selector == "Harris" and run_button:
-            if input_image is None:
-                st.error("Please select or upload an image")
-            else:
-                keypoints = detect_harris(
+                case "SIFT":
+                    st.info("SIFT detection not implemented yet")
+
+            image_key = sample_selector
+
+    # --- detect if context changed since last Run ---
+    context_changed = (
+        image_key != st.session_state.last_image_key or
+        algo_selector != st.session_state.last_algo
+    )
+    if context_changed:
+        st.session_state.has_run = False
+    # --- handle Run button ---
+    if run_button:
+        if input_image is None:
+            st.warning("Please select or upload an image first")
+        else:
+            st.session_state.has_run = True
+            st.session_state.last_image_key = image_key
+            st.session_state.last_algo = algo_selector
+
+    with right_column:
+        st.header("Processed output")
+
+        if input_image is None and run_button:
+            st.info("Please select or upload an image")
+
+        if algo_selector == "Harris":
+            if st.session_state.has_run and input_image is not None:
+                keypoints, harris_response_map = detect_harris(
                         input_image,
                         block_size,
                         ksize,
@@ -123,7 +148,6 @@ def main():
                         )
                 st.image(processed_image)
 
-        # st.info("Processed output placeholder")
 
     # placeholders for dignostic and info selection
     # TODO: Diagnostic viewer
