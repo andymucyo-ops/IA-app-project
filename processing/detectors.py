@@ -1,21 +1,8 @@
 import cv2 as cv
 import numpy as np
+from utils.helpers import _RGB_to_grayscale, _normalize_255
 
-def _RGB_to_grayscale(image: np.ndarray) -> np.ndarray:
-    grayscale = 0.299 * image[:,:,0] + 0.587 * image[:,:,1] + 0.114 * image[:,:,2]
-    return grayscale.astype(np.float32)
 
-def _normalize(image_array: np.ndarray) -> np.ndarray:
-    """
-    helper function that normalizes the image array (values in [0, 1])
-    """
-    denom: np.float32 = (image_array.max() - image_array.min())
-    if denom > 0:
-        normalized: np.ndarray = (image_array - image_array.min()) / denom
-    else:
-        normalized: np.ndarray = np.zeros_like(image_array)
-    return normalized
- 
 def detect_harris(
         image: np.ndarray,
         block_size: int = 2,
@@ -81,7 +68,7 @@ def detect_canny(
             ksize=3
             )
     gradient_magnitude = np.hypot(grad_x, grad_y)
-    gradient_uint8: np.ndarray = (_normalize(gradient_magnitude) * 255).astype(np.uint8) 
+    gradient_uint8: np.ndarray = _normalize_255(gradient_magnitude).astype(np.uint8) 
 
     #NMS + Hysteresis
     edges: np.ndarray = cv.Canny(blurred, low_threshold, high_threshold)
