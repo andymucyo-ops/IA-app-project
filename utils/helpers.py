@@ -5,6 +5,9 @@ from PIL import Image
 MAX_DIMENSION = 1024  # configurable constant at top of file
 
 def _resize_if_needed(img: Image.Image) -> Image.Image:
+    """
+    Resize input if needed for imahge_io to cap max size of image
+    """
     w, h = img.size
     if max(w, h) > MAX_DIMENSION:
         scale = MAX_DIMENSION / max(w, h)
@@ -23,6 +26,9 @@ def _normalize(image_array: np.ndarray) -> np.ndarray:
     return normalized
  
 def _RGB_to_grayscale(image: np.ndarray) -> np.ndarray:
+    """
+    converts RGB image to grayscale
+    """
     grayscale = 0.299 * image[:,:,0] + 0.587 * image[:,:,1] + 0.114 * image[:,:,2]
     return grayscale.astype(np.float32)
 
