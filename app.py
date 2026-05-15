@@ -20,7 +20,9 @@ def main():
     input_image = None
     image_key = None
 
+    #=================================================================
     # sidebar
+    #=================================================================
     with st.sidebar:
         input_selector = st.radio(
                                 "Image input",
@@ -88,66 +90,64 @@ def main():
             case "SIFT":
                 pass
         run_button = st.button("Run", type="primary")
-     
+    
+    #=================================================================
     # main area 
+    #=================================================================
+    if input_selector == "Upload file":
+        uploaded_image: UploadedFile | None = st.file_uploader(
+                "Uploaded image",
+                type=["jpg", "png"]
+                )
+        image_key = uploaded_image.name if uploaded_image is not None else None
+        if uploaded_image is not None:
+            input_image: np.ndarray | None = load_from_upload(uploaded_image)
+    else:
+        match algo_selector:
+            case "Harris":
+                sample_selector = st.selectbox(
+                "Sample images",
+                (
+                    "-- Choose your sample", 
+                    "Building", 
+                    "Checkerboard",
+                    )
+                )
+                image_key = sample_selector
+                match sample_selector:
+                    case "Building":
+                        input_image = load_from_sample("Building.jpeg")
+                    case "Checkerboard":
+                        input_image = load_from_sample("Checkerboard.jpg")
+                    case _:
+                        input_image = None
+   
+            case "Canny":
+                sample_selector = st.selectbox(
+                                    "Sample images",
+                                    (
+                                        "-- Choose your sample", 
+                                        "Building", 
+                                        "Checkered Flag",
+                                        )
+                                    )
+                image_key = sample_selector
+                match sample_selector:
+                    case "Building":
+                        input_image = load_from_sample("Building2.jpg")
+                    case "Checkered Flag":
+                        input_image = load_from_sample("Checkered_flag.jpg")
+                    case _:
+                        input_image = None
+ 
+            case "SIFT":
+                st.info("SIFT detection not implemented yet")
+
     left_column, right_column = st.columns(2)
     with left_column:
-        if input_selector == "Upload file":
-            uploaded_image: UploadedFile | None = st.file_uploader(
-                    "Uploaded image",
-                    type=["jpg", "png"]
-                    )
-            image_key = uploaded_image.name if uploaded_image is not None else None
-            if uploaded_image is not None:
-                input_image: np.ndarray | None = load_from_upload(uploaded_image)
-                if input_image is not None:
-                    st.image(input_image)
-        else:
-            match algo_selector:
-                case "Harris":
-                    sample_selector = st.selectbox(
-                    "Sample images",
-                    (
-                        "-- Choose your sample", 
-                        "Building", 
-                        "Checkerboard",
-                        )
-                    )
-                    image_key = sample_selector
-                    match sample_selector:
-                        case "Building":
-                            input_image = load_from_sample("Building.jpeg")
-                        case "Checkerboard":
-                            input_image = load_from_sample("Checkerboard.jpg")
-                        case _:
-                            input_image = None
-                    if input_image is not None:
-                        st.image(input_image)
-       
-                case "Canny":
-                    sample_selector = st.selectbox(
-                                        "Sample images",
-                                        (
-                                            "-- Choose your sample", 
-                                            "Building", 
-                                            "Checkered Flag"
-                                            )
-                                        )
-                    image_key = sample_selector
-                    match sample_selector:
-                        case "Building":
-                            input_image = load_from_sample("Building2.jpg")
-                        case "Checkered Flag":
-                            input_image = load_from_sample("Checkered_flag.jpg")
-                        case _:
-                            input_image = None
-                    if input_image is not None:
-                        st.image(input_image)
-     
-                case "SIFT":
-                    st.info("SIFT detection not implemented yet")
-
-
+        st.subheader("Input image")
+        if input_image is not None:
+            st.image(input_image)
     # --- detect if context changed since last Run ---
     context_changed = (
         image_key != st.session_state.last_image_key or
@@ -194,7 +194,7 @@ def main():
                             low_threshold,
                             high_threshold
                             )
-                    
+                    image_slot = st.empty()
                     # step-by-step toggle — unique to Canny
                     step = st.radio(
                             "Pipeline step",
@@ -202,10 +202,9 @@ def main():
                             horizontal=True
                             )
                     
-                    st.image(canny_result[step], clamp=True)
+                    image_slot.image(canny_result[step], clamp=True)
 
 
-    # placeholders for dignostic and info selection
     # TODO: Diagnostic viewer
     # TODO: Metrics info
 
