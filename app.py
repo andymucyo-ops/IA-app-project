@@ -228,7 +228,7 @@ def main():
         match algo_selector:
             case "Harris":
                 if st.session_state.has_run and input_image is not None:
-                    harris_keypoints, harris_response_map = detect_harris(
+                    (harris_keypoints, harris_response_map), exec_time = detect_harris(
                             input_image,
                             block_size,
                             ksize,
@@ -243,7 +243,7 @@ def main():
                     image_slot.image(processed_image)
             case "Canny":
                 if st.session_state.has_run and input_image is not None:
-                    canny_result: dict = detect_canny(
+                    canny_result, exec_time = detect_canny(
                             input_image,
                             sigma,
                             low_threshold,
@@ -259,7 +259,7 @@ def main():
                     image_slot.image(canny_result[step], clamp=True)
             case "SIFT":
                 if st.session_state.has_run and input_image is not None:
-                    sift_keypoints, sift_detectors = detect_sift(
+                    (sift_keypoints, sift_detectors), exec_time = detect_sift(
                             input_image,
                             nfeatures,
                             contrast_threshold,
