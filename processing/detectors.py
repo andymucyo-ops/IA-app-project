@@ -84,3 +84,23 @@ def detect_canny(
         "edges": edges,
         }
 
+
+def detect_sift(
+        image: np.ndarray,
+        nfeatures: int,
+        contrast_threshold: float,
+        edge_threshold: float,
+        sigma: float
+        ) -> tuple[list[cv.KeyPoint], np.ndarray]:
+    gray: np.ndarray = _RGB_to_grayscale(image)
+    uint8_gray: np.ndarray = (gray * 255).astype(np.uint8) 
+
+    sift: cv.SIFT = cv.SIFT_create(
+            nfeatures=nfeatures,
+            contrastThreshold=contrast_threshold,
+            edgeThreshold=edge_threshold,
+            sigma=sigma
+            )
+    keypoints, descriptors = sift.detectAndCompute(uint8_gray, mask=None)
+
+    return keypoints, descriptors
