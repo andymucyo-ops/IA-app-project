@@ -1,9 +1,10 @@
 import numpy as np
 import streamlit as st
+import matplotlib.pyplot as plt
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from processing.detectors import detect_canny, detect_harris
-from utils.visualization import draw_keypoints
+from utils.visualization import draw_heatmap, draw_heatmap_overlay, draw_keypoints, draw_response_histogram
 from utils.image_io import load_from_sample, load_from_upload
 
 
@@ -11,6 +12,7 @@ from utils.image_io import load_from_sample, load_from_upload
 def main():
     st.title("🔍 Feature Extraction Explorer")
 
+    #initializing state variables
     if "has_run" not in st.session_state:
         st.session_state.has_run = False
     if "last_image_key" not in st.session_state:
@@ -19,6 +21,8 @@ def main():
         st.session_state.last_algo = None
     input_image = None
     image_key = None
+    harris_response_map = None
+    canny_result = None
 
     #=================================================================
     # sidebar
@@ -32,7 +36,7 @@ def main():
                                 "Detector",
                                 ("Canny", "Harris", "SIFT")
                                 )
-        # st.info("Parameters will appear here")
+
         match algo_selector:
             case "Canny":
                 st.subheader("Parameters")
@@ -127,13 +131,16 @@ def main():
                                     "Sample images",
                                     (
                                         "-- Choose your sample", 
-                                        "Building", 
+                                        "Building",
+                                        "Building 2", 
                                         "Checkered Flag",
                                         )
                                     )
                 image_key = sample_selector
                 match sample_selector:
                     case "Building":
+                        input_image = load_from_sample("Building.jpg")
+                    case "Building 2":
                         input_image = load_from_sample("Building2.jpg")
                     case "Checkered Flag":
                         input_image = load_from_sample("Checkered_flag.jpg")
@@ -142,7 +149,10 @@ def main():
  
             case "SIFT":
                 st.info("SIFT detection not implemented yet")
-
+    
+    #=================================================================
+    # Image display
+    #=================================================================
     left_column, right_column = st.columns(2)
     with left_column:
         st.subheader("Input image")
@@ -167,8 +177,6 @@ def main():
     with right_column:
         st.subheader("Processed output")
 
-        if input_image is None and run_button:
-            st.warning("Please select or upload an image")
 
         match algo_selector:
             case "Harris":
@@ -204,9 +212,52 @@ def main():
                     
                     image_slot.image(canny_result[step], clamp=True)
 
+    #=================================================================
+    # Diognostic and metrics
+    #=================================================================
 
-    # TODO: Diagnostic viewer
-    # TODO: Metrics info
+    match algo_selector:
+        case "Harris":
+            tab_heatmap, tab_histogram = st.tabs(
+            ["Response heatmap", "Distribution"]
+            )
+            with tab_heatmap:
+                activate_overlay: bool = st.checkbox("Show overlay")
+                if harris_response_map is not None:
+                    if activate_overlay: 
+                        heatmap: np.ndarray = draw_heatmap_overlay(
+                                input_image,
+                                harris_response_map
+                                ) 
+                    else:
+                        heatmap = draw_heatmap(
+                                harris_response_map
+                                )
+                    st.image(heatmap)
+            with tab_histogram:
+                if harris_response_map is not None:
+                    fig = draw_response_histogram(harris_response_map)
+                    st.pyplot(fig)
+                    plt.close(fig)
+                    
+
+        case "Canny":
+            tab_heatmap, tab_histogram = st.tabs(
+            ["Response heatmap", "Distribution"]
+            )
+            with tab_heatmap:
+                if canny_result is not None:
+                    st.image(canny_result["gradient"], clamp=True)
+
+            with tab_histogram:
+                if canny_result is not None:
+                    fig = draw_response_histogram(canny_result["gradient"])
+                    st.pyplot(fig)
+                    plt.close(fig)
+                    
+        case "SIFT":
+            st.info("Not implemented yet")
+
 
 
 
