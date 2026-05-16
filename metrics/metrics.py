@@ -12,7 +12,7 @@ def compute_harris_metrics(
     return {
             "Keypoints count" : count,
             "Mean response" : round(mean_response, 4),
-            "Exec time (s)": round(exec_time, 3)
+            "Exec time (ms)": round(exec_time, 3)
             }
 
 def compute_canny_metrics(
@@ -26,7 +26,7 @@ def compute_canny_metrics(
     return {
             "Edge pixels": edge_pixel_count,
             "Mean gradient": round(mean_gradient, 4),
-            "Exec time (s)": round(exec_time, 3)           
+            "Exec time (ms)": round(exec_time, 3)           
             }
     
 def compute_sift_metrics(
@@ -40,7 +40,7 @@ def compute_sift_metrics(
     return {
             "Keypoints count" : count,
             "Mean response" : round(mean_response, 4),
-            "Exec time (s)": round(exec_time, 3)
+            "Exec time (ms)": round(exec_time, 3)
             }
 
    

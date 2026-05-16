@@ -49,7 +49,7 @@ def timer(func):
     def wrapper(*args, **kwargs):
         start = time()
         res = func(*args, ** kwargs)
-        exec_time = time() - start
+        exec_time = (time() - start) * 1000
 
         return res, exec_time
 
