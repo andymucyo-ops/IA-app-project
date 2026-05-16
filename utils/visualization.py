@@ -107,3 +107,22 @@ def draw_sift_keypoints(
             )
     return output
     
+def draw_feature_matching(
+        image1: np.ndarray,
+        keypoints1: list[cv.KeyPoint],
+        image2: np.ndarray,
+        keypoints2: list[cv.KeyPoint],
+        matches: list[cv.DMatch]
+        ) -> np.ndarray:
+    uint8_image1: np.ndarray = (image1 * 255).astype(np.uint8)
+    uint8_image2: np.ndarray = (image2 * 255).astype(np.uint8)
+
+    output: np.ndarray = cv.drawMatches(
+            uint8_image1, keypoints1,
+            uint8_image2, keypoints2,
+            matches,
+            outImg=None,
+            flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+            )
+
+    return cv.cvtColor(output, cv.COLOR_BGR2RGB)
