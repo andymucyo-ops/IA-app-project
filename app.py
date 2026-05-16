@@ -3,8 +3,8 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
-from processing.detectors import detect_canny, detect_harris
-from utils.visualization import draw_heatmap, draw_heatmap_overlay, draw_keypoints, draw_response_histogram
+from processing.detectors import detect_canny, detect_harris, detect_sift
+from utils.visualization import draw_heatmap, draw_heatmap_overlay, draw_keypoints, draw_response_histogram, draw_sift_heatmap, draw_sift_heatmap_overlay, draw_sift_keypoints
 from utils.image_io import load_from_sample, load_from_upload
 
 
@@ -23,43 +23,27 @@ def main():
     image_key = None
     harris_response_map = None
     canny_result = None
+    sift_keypoints = None
+    sift_detectors = None
 
     #=================================================================
     # sidebar
     #=================================================================
     with st.sidebar:
+        st.subheader("Input selection")
         input_selector = st.radio(
                                 "Image input",
-                                ("Upload file", "Sample images")
+                                ("Upload file", "Sample images"),
+                                label_visibility="collapsed"
                                 )
-        algo_selector = st.selectbox(
+        st.subheader("Detection algorithm")
+        algo_selector = st.radio(
                                 "Detector",
-                                ("Canny", "Harris", "SIFT")
+                                ("Harris", "Canny", "SIFT"),
+                                label_visibility="collapsed"
                                 )
 
         match algo_selector:
-            case "Canny":
-                st.subheader("Parameters")
-                sigma: float = st.slider(
-                        "Sigma",
-                        min_value=0.5,
-                        max_value=5.0,
-                        value=1.0,
-                        step=0.1
-                        )
-                low_threshold: int = st.slider(
-                        "Low threshold",
-                        min_value=0,
-                        max_value=100,
-                        value=50
-                        )
-                high_threshold: int = st.slider(
-                        "High threshold",
-                        min_value=0,
-                        max_value=300,
-                        value=150
-                        )
-
             case "Harris":
                 st.subheader("Parameters")
                 block_size: int = st.slider(
@@ -91,8 +75,54 @@ def main():
                         min_value=2, 
                         max_value=10
                         )
+
+            case "Canny":
+                st.subheader("Parameters")
+                sigma: float = st.slider(
+                        "Sigma",
+                        min_value=0.5,
+                        max_value=5.0,
+                        value=1.0,
+                        step=0.1
+                        )
+                low_threshold: int = st.slider(
+                        "Low threshold",
+                        min_value=0,
+                        max_value=100,
+                        value=50
+                        )
+                high_threshold: int = st.slider(
+                        "High threshold",
+                        min_value=0,
+                        max_value=300,
+                        value=150
+                        )
+
             case "SIFT":
-                pass
+                nfeatures: int = st.slider(
+                        "nfeatures",
+                        min_value=0,
+                        max_value=1000,
+                        value=0
+                        )
+                contrast_threshold: float = st.slider(
+                        "Contrast threshold",
+                        min_value=0.01,
+                        max_value=0.1,
+                        value=0.04
+                        )
+                edge_threshold: int = st.slider(
+                        "Edge threshold",
+                        min_value=5,
+                        max_value=30,
+                        value=10
+                        )
+                sigma: float = st.slider(
+                        "Sigma",
+                        min_value=1.2,
+                        max_value=2.0,
+                        value=1.6
+                        )
         run_button = st.button("Run", type="primary")
     
     #=================================================================
@@ -148,10 +178,28 @@ def main():
                         input_image = None
  
             case "SIFT":
-                st.info("SIFT detection not implemented yet")
+                sample_selector = st.selectbox(
+                                    "Sample images",
+                                    (
+                                        "-- Choose your sample", 
+                                        "Building",
+                                        "Building 2", 
+                                        "Checkered Flag",
+                                        )
+                                    )
+                image_key = sample_selector
+                match sample_selector:
+                    case "Building":
+                        input_image = load_from_sample("Building.jpg")
+                    case "Building 2":
+                        input_image = load_from_sample("Building2.jpg")
+                    case "Checkered Flag":
+                        input_image = load_from_sample("Checkered_flag.jpg")
+                    case _:
+                        input_image = None
     
     #=================================================================
-    # Image display
+    # Image display and processing
     #=================================================================
     left_column, right_column = st.columns(2)
     with left_column:
@@ -176,12 +224,11 @@ def main():
 
     with right_column:
         st.subheader("Processed output")
-
-
+        image_slot = st.empty()
         match algo_selector:
             case "Harris":
                 if st.session_state.has_run and input_image is not None:
-                    keypoints, harris_response_map = detect_harris(
+                    harris_keypoints, harris_response_map = detect_harris(
                             input_image,
                             block_size,
                             ksize,
@@ -190,10 +237,10 @@ def main():
                             )
                     processed_image: np.ndarray = draw_keypoints(
                             input_image,
-                            keypoints,
+                            harris_keypoints,
                             radius=radius
                             )
-                    st.image(processed_image)
+                    image_slot.image(processed_image)
             case "Canny":
                 if st.session_state.has_run and input_image is not None:
                     canny_result: dict = detect_canny(
@@ -202,7 +249,6 @@ def main():
                             low_threshold,
                             high_threshold
                             )
-                    image_slot = st.empty()
                     # step-by-step toggle — unique to Canny
                     step = st.radio(
                             "Pipeline step",
@@ -211,53 +257,94 @@ def main():
                             )
                     
                     image_slot.image(canny_result[step], clamp=True)
+            case "SIFT":
+                if st.session_state.has_run and input_image is not None:
+                    sift_keypoints, sift_detectors = detect_sift(
+                            input_image,
+                            nfeatures,
+                            contrast_threshold,
+                            edge_threshold,
+                            sigma
+                            )
+                    processed_image = draw_sift_keypoints(input_image, sift_keypoints)
+                    image_slot.image(processed_image)
+
 
     #=================================================================
-    # Diognostic and metrics
+    # Process visualization 
     #=================================================================
 
-    match algo_selector:
-        case "Harris":
-            tab_heatmap, tab_histogram = st.tabs(
-            ["Response heatmap", "Distribution"]
-            )
-            with tab_heatmap:
-                activate_overlay: bool = st.checkbox("Show overlay")
-                if harris_response_map is not None:
-                    if activate_overlay: 
-                        heatmap: np.ndarray = draw_heatmap_overlay(
-                                input_image,
-                                harris_response_map
-                                ) 
-                    else:
-                        heatmap = draw_heatmap(
-                                harris_response_map
-                                )
-                    st.image(heatmap)
-            with tab_histogram:
-                if harris_response_map is not None:
-                    fig = draw_response_histogram(harris_response_map)
-                    st.pyplot(fig)
-                    plt.close(fig)
-                    
+    with st.expander("Diagnostic and metrics"):
+        match algo_selector:
+            case "Harris":
+                tab_heatmap, tab_histogram = st.tabs(
+                ["Response heatmap", "Distribution"]
+                )
+                with tab_heatmap:
+                    activate_overlay: bool = st.checkbox("Show overlay")
+                    if harris_response_map is not None:
+                        if activate_overlay: 
+                            heatmap: np.ndarray = draw_heatmap_overlay(
+                                    input_image,
+                                    harris_response_map
+                                    ) 
+                        else:
+                            heatmap = draw_heatmap(
+                                    harris_response_map
+                                    )
+                        st.image(heatmap)
+                with tab_histogram:
+                    if harris_response_map is not None:
+                        fig = draw_response_histogram(harris_response_map)
+                        st.pyplot(fig)
+                        plt.close(fig)
+                        
 
-        case "Canny":
-            tab_heatmap, tab_histogram = st.tabs(
-            ["Response heatmap", "Distribution"]
-            )
-            with tab_heatmap:
-                if canny_result is not None:
-                    st.image(canny_result["gradient"], clamp=True)
+            case "Canny":
+                tab_heatmap, tab_histogram = st.tabs(
+                ["Response heatmap", "Distribution"]
+                )
+                with tab_heatmap:
+                    if canny_result is not None:
+                        st.image(canny_result["gradient"], clamp=True)
 
-            with tab_histogram:
-                if canny_result is not None:
-                    fig = draw_response_histogram(canny_result["gradient"])
-                    st.pyplot(fig)
-                    plt.close(fig)
-                    
-        case "SIFT":
-            st.info("Not implemented yet")
+                with tab_histogram:
+                    if canny_result is not None:
+                        fig = draw_response_histogram(canny_result["gradient"])
+                        st.pyplot(fig)
+                        plt.close(fig)
+                        
+            case "SIFT":
+                tab_heatmap, tab_histogram, tab_matching = st.tabs(
+                ["Response heatmap", "Distribution", "Matching"]
+                        )
+                with tab_heatmap:
+                     activate_overlay: bool = st.checkbox("Show overlay")
+                     if sift_keypoints is not None:
+                        if activate_overlay: 
+                            heatmap: np.ndarray = draw_sift_heatmap_overlay(
+                                    input_image,
+                                    sift_keypoints
+                                    ) 
+                        else:
+                            heatmap = draw_sift_heatmap(
+                                    input_image,
+                                    sift_keypoints
+                                    )
+                        st.image(heatmap)
 
+                with tab_histogram:
+                    if sift_keypoints is not None:
+                        response = [kp.response for kp in sift_keypoints]
+                        fig = draw_response_histogram(response)
+                        st.pyplot(fig)
+                        plt.close(fig)
+                with tab_matching:
+                    st.info("Feature matching not implemented yet")
+
+    #=================================================================
+    # Metrics section
+    #=================================================================
 
 
 
