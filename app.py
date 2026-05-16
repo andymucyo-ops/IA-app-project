@@ -3,6 +3,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
+from metrics.metrics import compute_canny_metrics, compute_harris_metrics, compute_sift_metrics
 from processing.detectors import detect_canny, detect_harris, detect_sift
 from utils.visualization import draw_heatmap, draw_heatmap_overlay, draw_keypoints, draw_response_histogram, draw_sift_heatmap, draw_sift_heatmap_overlay, draw_sift_keypoints
 from utils.image_io import load_from_sample, load_from_upload
@@ -21,10 +22,13 @@ def main():
         st.session_state.last_algo = None
     input_image = None
     image_key = None
+    harris_keypoints = None
     harris_response_map = None
     canny_result = None
     sift_keypoints = None
     sift_detectors = None
+    metrics = None
+    exec_time = 0.0
 
     #=================================================================
     # sidebar
@@ -78,7 +82,7 @@ def main():
 
             case "Canny":
                 st.subheader("Parameters")
-                sigma: float = st.slider(
+                canny_sigma: float = st.slider(
                         "Sigma",
                         min_value=0.5,
                         max_value=5.0,
@@ -99,6 +103,7 @@ def main():
                         )
 
             case "SIFT":
+                st.subheader("Parameters")
                 nfeatures: int = st.slider(
                         "nfeatures",
                         min_value=0,
@@ -117,7 +122,7 @@ def main():
                         max_value=30,
                         value=10
                         )
-                sigma: float = st.slider(
+                sift_sigma: float = st.slider(
                         "Sigma",
                         min_value=1.2,
                         max_value=2.0,
@@ -245,7 +250,7 @@ def main():
                 if st.session_state.has_run and input_image is not None:
                     canny_result, exec_time = detect_canny(
                             input_image,
-                            sigma,
+                            canny_sigma,
                             low_threshold,
                             high_threshold
                             )
@@ -264,7 +269,7 @@ def main():
                             nfeatures,
                             contrast_threshold,
                             edge_threshold,
-                            sigma
+                            sift_sigma
                             )
                     processed_image = draw_sift_keypoints(input_image, sift_keypoints)
                     image_slot.image(processed_image)
@@ -274,79 +279,105 @@ def main():
     # Process visualization 
     #=================================================================
 
-    with st.expander("Diagnostic and metrics"):
-        match algo_selector:
-            case "Harris":
-                tab_heatmap, tab_histogram = st.tabs(
-                ["Response heatmap", "Distribution"]
-                )
-                with tab_heatmap:
-                    activate_overlay: bool = st.checkbox("Show overlay")
-                    if harris_response_map is not None:
-                        if activate_overlay: 
-                            heatmap: np.ndarray = draw_heatmap_overlay(
-                                    input_image,
-                                    harris_response_map
-                                    ) 
-                        else:
-                            heatmap = draw_heatmap(
-                                    harris_response_map
-                                    )
-                        st.image(heatmap)
-                with tab_histogram:
-                    if harris_response_map is not None:
-                        fig = draw_response_histogram(harris_response_map)
-                        st.pyplot(fig)
-                        plt.close(fig)
-                        
+    match algo_selector:
+        case "Harris":
+            tab_heatmap, tab_histogram = st.tabs(
+            ["Response heatmap", "Distribution"]
+            )
+            with tab_heatmap:
+                activate_overlay: bool = st.checkbox("Show overlay")
+                if harris_response_map is not None:
+                    if activate_overlay: 
+                        heatmap: np.ndarray = draw_heatmap_overlay(
+                                input_image,
+                                harris_response_map
+                                ) 
+                    else:
+                        heatmap = draw_heatmap(
+                                harris_response_map
+                                )
+                    st.image(heatmap)
+            with tab_histogram:
+                if harris_response_map is not None:
+                    fig = draw_response_histogram(harris_response_map)
+                    st.pyplot(fig)
+                    plt.close(fig)
+                    
 
-            case "Canny":
-                tab_heatmap, tab_histogram = st.tabs(
-                ["Response heatmap", "Distribution"]
-                )
-                with tab_heatmap:
-                    if canny_result is not None:
-                        st.image(canny_result["gradient"], clamp=True)
+        case "Canny":
+            tab_heatmap, tab_histogram = st.tabs(
+            ["Response heatmap", "Distribution"]
+            )
+            with tab_heatmap:
+                if canny_result is not None:
+                    st.image(canny_result["gradient"], clamp=True)
 
-                with tab_histogram:
-                    if canny_result is not None:
-                        fig = draw_response_histogram(canny_result["gradient"])
-                        st.pyplot(fig)
-                        plt.close(fig)
-                        
-            case "SIFT":
-                tab_heatmap, tab_histogram, tab_matching = st.tabs(
-                ["Response heatmap", "Distribution", "Matching"]
-                        )
-                with tab_heatmap:
-                     activate_overlay: bool = st.checkbox("Show overlay")
-                     if sift_keypoints is not None:
-                        if activate_overlay: 
-                            heatmap: np.ndarray = draw_sift_heatmap_overlay(
-                                    input_image,
-                                    sift_keypoints
-                                    ) 
-                        else:
-                            heatmap = draw_sift_heatmap(
-                                    input_image,
-                                    sift_keypoints
-                                    )
-                        st.image(heatmap)
+            with tab_histogram:
+                if canny_result is not None:
+                    fig = draw_response_histogram(canny_result["gradient"])
+                    st.pyplot(fig)
+                    plt.close(fig)
+                    
+        case "SIFT":
+            tab_heatmap, tab_histogram, tab_matching = st.tabs(
+            ["Response heatmap", "Distribution", "Matching"]
+                    )
+            with tab_heatmap:
+                 activate_overlay: bool = st.checkbox("Show overlay")
+                 if sift_keypoints is not None:
+                    if activate_overlay: 
+                        heatmap: np.ndarray = draw_sift_heatmap_overlay(
+                                input_image,
+                                sift_keypoints
+                                ) 
+                    else:
+                        heatmap = draw_sift_heatmap(
+                                input_image,
+                                sift_keypoints
+                                )
+                    st.image(heatmap)
 
-                with tab_histogram:
-                    if sift_keypoints is not None:
-                        response = [kp.response for kp in sift_keypoints]
-                        fig = draw_response_histogram(response)
-                        st.pyplot(fig)
-                        plt.close(fig)
-                with tab_matching:
-                    st.info("Feature matching not implemented yet")
+            with tab_histogram:
+                if sift_keypoints is not None:
+                    response = [kp.response for kp in sift_keypoints]
+                    fig = draw_response_histogram(response)
+                    st.pyplot(fig)
+                    plt.close(fig)
+            with tab_matching:
+                st.info("Feature matching not implemented yet")
 
     #=================================================================
     # Metrics section
     #=================================================================
+    st.subheader("Metrics")
 
+    match algo_selector:
+        case "Harris":
+            if harris_keypoints is not None:
+                metrics = compute_harris_metrics(
+                        harris_keypoints, 
+                        harris_response_map,
+                        exec_time
+                        )
+        case "Canny":
+            if canny_result is not None:
+                metrics = compute_canny_metrics(
+                        canny_result["edges"], 
+                        canny_result["gradient"],
+                        exec_time
+                        )
+        case "SIFT":
+            if sift_keypoints is not None:
+                metrics = compute_sift_metrics(
+                        sift_keypoints, 
+                        exec_time
+                        )
 
+    col1, col2, col3 = st.columns(3)
+    if metrics is not None:
+        for col, (label, value) in zip([col1, col2, col3], metrics.items()):
+            with col:
+                st.metric(label, value)
 
 
 if __name__ == "__main__":
