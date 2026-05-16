@@ -1,8 +1,9 @@
 import cv2 as cv
 import numpy as np
-from utils.helpers import _RGB_to_grayscale, _normalize_255
+from utils.helpers import _RGB_to_grayscale, _normalize_255, timer
 
 
+@timer
 def detect_harris(
         image: np.ndarray,
         block_size: int = 2,
@@ -27,6 +28,7 @@ def detect_harris(
 
         return keypoints, harris_response_map
 
+@timer
 def detect_canny(
         image: np.ndarray,
         sigma: float,
@@ -85,6 +87,7 @@ def detect_canny(
         }
 
 
+@timer
 def detect_sift(
         image: np.ndarray,
         nfeatures: int,

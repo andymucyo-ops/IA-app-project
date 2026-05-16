@@ -1,3 +1,4 @@
+from time import time
 import numpy as np
 from PIL import Image
 
@@ -43,3 +44,13 @@ def _normalize_255(image_array: np.ndarray) -> np.ndarray:
         normalized: np.ndarray = np.zeros_like(image_array)
     return normalized * 255
 
+def timer(func):
+
+    def wrapper(*args, **kwargs):
+        start = time()
+        res = func(*args, ** kwargs)
+        exec_time = time() - start
+
+        return res, exec_time
+
+    return wrapper
