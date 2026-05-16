@@ -107,7 +107,7 @@ def draw_sift_keypoints(
             )
     return output
     
-def draw_feature_matching(
+def draw_feature_matches(
         image1: np.ndarray,
         keypoints1: list[cv.KeyPoint],
         image2: np.ndarray,

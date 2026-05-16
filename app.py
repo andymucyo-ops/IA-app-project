@@ -7,7 +7,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 from metrics.metrics import compute_canny_metrics, compute_harris_metrics, compute_sift_metrics
 from processing.detectors import detect_canny, detect_harris, detect_sift
 from processing.matching import match_features
-from utils.visualization import draw_feature_matching, draw_heatmap, draw_heatmap_overlay, draw_keypoints, draw_response_histogram, draw_sift_heatmap, draw_sift_heatmap_overlay, draw_sift_keypoints
+from utils.visualization import draw_feature_matches, draw_heatmap, draw_heatmap_overlay, draw_keypoints, draw_response_histogram, draw_sift_heatmap, draw_sift_heatmap_overlay, draw_sift_keypoints
 from utils.image_io import load_from_sample, load_from_upload
 
 
@@ -346,40 +346,54 @@ def main():
                     st.pyplot(fig)
                     plt.close(fig)
             with tab_matching:
-                st.info("upload a second image to see feature matching")
-                second_image_upload: UploadedFile | None = st.file_uploader(
-                "Uploaded image",
-                type=["jpg", "png"],
-                key="second_image"
-                )
+                if input_image is not None:
+                    match input_selector:
+                        case "Upload file":
+                            st.info("upload a second image to see feature matching")
+                            second_image_upload: UploadedFile | None = st.file_uploader(
+                            "Uploaded image",
+                            type=["jpg", "png"],
+                            key="second_image"
+                            )
 
-                if second_image_upload is not None and sift_keypoints is not None:
-                    second_image: np.ndarray = load_from_upload(second_image_upload)
-                    (sift_keypoints2, sift_descriptors2), _ = detect_sift(
-                            second_image, 
-                            nfeatures, 
-                            contrast_threshold, 
-                            edge_threshold, 
-                            sift_sigma
-                            )
-                    max_matches: int = st.slider(
-                            "Max number of matches",
-                            min_value=50,
-                            max_value=500,
-                            value=50
-                            )
-                    matches: list[cv.DMatch] = match_features(
-                            sift_descriptors, 
-                            sift_descriptors2,
-                            max_matches
-                            ) 
-                    match_viz: np.ndarray = draw_feature_matching(
-                            input_image, sift_keypoints,
-                            second_image, sift_keypoints2,
-                            matches
-                            )
-                    st.image(match_viz)
-                    
+                            if second_image_upload is not None and sift_keypoints is not None:
+                                second_image: np.ndarray = load_from_upload(second_image_upload)
+                        case "Sample images":
+                            matching_sample = st.selectbox(
+                                    "distorted sample image to be matched",
+                                    ("Building2 cropped")
+                                    )
+                            match matching_sample:
+                                case "Building2 cropped":
+                                    second_image = load_from_sample(
+                                            "sift_matching/cropped_building2.jpg"
+                                            )
+                    if second_image is not None:
+                        (sift_keypoints2, sift_descriptors2), _ = detect_sift(
+                                second_image, 
+                                nfeatures, 
+                                contrast_threshold, 
+                                edge_threshold, 
+                                sift_sigma
+                                )
+                        max_matches: int = st.slider(
+                                "Max number of matches",
+                                min_value=1,
+                                max_value=50,
+                                value=25
+                                )
+                        matches: list[cv.DMatch] = match_features(
+                                sift_descriptors, 
+                                sift_descriptors2,
+                                max_matches
+                                ) 
+                        match_viz: np.ndarray = draw_feature_matches(
+                                input_image, sift_keypoints,
+                                second_image, sift_keypoints2,
+                                matches
+                                )
+                        st.image(match_viz)
+                        
 
 
     #=================================================================
