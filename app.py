@@ -1,11 +1,13 @@
 import numpy as np
 import streamlit as st
+import cv2 as cv
 import matplotlib.pyplot as plt
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from metrics.metrics import compute_canny_metrics, compute_harris_metrics, compute_sift_metrics
 from processing.detectors import detect_canny, detect_harris, detect_sift
-from utils.visualization import draw_heatmap, draw_heatmap_overlay, draw_keypoints, draw_response_histogram, draw_sift_heatmap, draw_sift_heatmap_overlay, draw_sift_keypoints
+from processing.matching import match_features
+from utils.visualization import draw_feature_matching, draw_heatmap, draw_heatmap_overlay, draw_keypoints, draw_response_histogram, draw_sift_heatmap, draw_sift_heatmap_overlay, draw_sift_keypoints
 from utils.image_io import load_from_sample, load_from_upload
 
 
@@ -26,7 +28,7 @@ def main():
     harris_response_map = None
     canny_result = None
     sift_keypoints = None
-    sift_detectors = None
+    sift_descriptors = None
     metrics = None
     exec_time = 0.0
 
@@ -264,7 +266,7 @@ def main():
                     image_slot.image(canny_result[step], clamp=True)
             case "SIFT":
                 if st.session_state.has_run and input_image is not None:
-                    (sift_keypoints, sift_detectors), exec_time = detect_sift(
+                    (sift_keypoints, sift_descriptors), exec_time = detect_sift(
                             input_image,
                             nfeatures,
                             contrast_threshold,
@@ -344,7 +346,41 @@ def main():
                     st.pyplot(fig)
                     plt.close(fig)
             with tab_matching:
-                st.info("Feature matching not implemented yet")
+                st.info("upload a second image to see feature matching")
+                second_image_upload: UploadedFile | None = st.file_uploader(
+                "Uploaded image",
+                type=["jpg", "png"],
+                key="second_image"
+                )
+
+                if second_image_upload is not None and sift_keypoints is not None:
+                    second_image: np.ndarray = load_from_upload(second_image_upload)
+                    (sift_keypoints2, sift_descriptors2), _ = detect_sift(
+                            second_image, 
+                            nfeatures, 
+                            contrast_threshold, 
+                            edge_threshold, 
+                            sift_sigma
+                            )
+                    max_matches: int = st.slider(
+                            "Max number of matches",
+                            min_value=50,
+                            max_value=500,
+                            value=50
+                            )
+                    matches: list[cv.DMatch] = match_features(
+                            sift_descriptors, 
+                            sift_descriptors2,
+                            max_matches
+                            ) 
+                    match_viz: np.ndarray = draw_feature_matching(
+                            input_image, sift_keypoints,
+                            second_image, sift_keypoints2,
+                            matches
+                            )
+                    st.image(match_viz)
+                    
+
 
     #=================================================================
     # Metrics section
