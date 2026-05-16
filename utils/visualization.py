@@ -44,6 +44,41 @@ def draw_heatmap_overlay(image: np.ndarray, response_map: np.ndarray) -> np.ndar
 
     return blended
 
+def draw_sift_heatmap(image: np.ndarray, keypoints: list[cv.KeyPoint]) -> np.ndarray:
+    height, width = image.shape[:2]
+    density_map: np.ndarray = np.zeros((height, width), dtype=np.float32)
+
+    for kp in keypoints:
+        x,y = int(kp.pt[0]), int(kp.pt[1])
+        scale = kp.size
+        cv.circle(density_map, (x,y), radius=int(scale), color=kp.response, thickness=-1)
+
+    blurred_density = cv.GaussianBlur(density_map, (0, 0), sigmaX=20)
+    normalized = _normalize_255(blurred_density).astype(np.uint8)
+    heatmap_BGR: np.ndarray = cv.applyColorMap(normalized, cv.COLORMAP_JET)
+    heatmap_RGB: np.ndarray = cv.cvtColor(heatmap_BGR, cv.COLOR_BGR2RGB) 
+
+    return heatmap_RGB
+
+def draw_sift_heatmap_overlay(image: np.ndarray, keypoints: list[cv.KeyPoint]) -> np.ndarray:
+    uint8_image: np.ndarray = (image * 255).astype(np.uint8)
+    height, width = image.shape[:2]
+    density_map: np.ndarray = np.zeros((height, width), dtype=np.float32)
+
+    for kp in keypoints:
+        x,y = int(kp.pt[0]), int(kp.pt[1])
+        scale = kp.size
+        cv.circle(density_map, (x,y), radius=int(scale), color=kp.response, thickness=-1)
+
+    blurred_density = cv.GaussianBlur(density_map, (0, 0), sigmaX=20)
+    normalized = _normalize_255(blurred_density).astype(np.uint8)
+    heatmap_BGR: np.ndarray = cv.applyColorMap(normalized, cv.COLORMAP_JET)
+    heatmap_RGB: np.ndarray = cv.cvtColor(heatmap_BGR, cv.COLOR_BGR2RGB) 
+    blended = cv.addWeighted(uint8_image, 0.5, heatmap_RGB, 0.5, 0)
+
+    return blended
+
+
 def draw_response_histogram(response_map: np.ndarray) -> plt.Figure:
     response_map_1D: np.ndarray = np.ravel(response_map)
     fig, ax = plt.subplots()
@@ -57,3 +92,18 @@ def draw_response_histogram(response_map: np.ndarray) -> plt.Figure:
     ax.set_title("Response strength distribution")
 
     return fig
+
+def draw_sift_keypoints(
+        image,
+        keypoints
+        ):
+    uint8_image = (image * 255).astype(np.uint8)
+    output: np.ndarray = uint8_image.copy()
+    cv.drawKeypoints(
+            uint8_image,
+            keypoints,
+            output,
+            flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+            )
+    return output
+    
