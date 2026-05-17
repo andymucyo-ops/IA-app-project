@@ -117,9 +117,13 @@ def draw_feature_matches(
     uint8_image1: np.ndarray = (image1 * 255).astype(np.uint8)
     uint8_image2: np.ndarray = (image2 * 255).astype(np.uint8)
 
+    bgr_image1: np.ndarray = cv.cvtColor(uint8_image1, cv.COLOR_RGB2BGR)
+    bgr_image2: np.ndarray = cv.cvtColor(uint8_image2, cv.COLOR_RGB2BGR)
+
+
     output: np.ndarray = cv.drawMatches(
-            uint8_image1, keypoints1,
-            uint8_image2, keypoints2,
+            bgr_image1, keypoints1,
+            bgr_image2, keypoints2,
             matches,
             outImg=None,
             flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
