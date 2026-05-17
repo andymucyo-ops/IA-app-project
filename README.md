@@ -26,7 +26,7 @@ For each algorithm, the app provides:
 
 ### Prerequisites
 
-This project uses [`uv`](https://github.com/astral-sh/uv) as the package manager.
+This project uses [`uv`](https://docs.astral.sh/uv/) as the package manager.
 
 ```bash
 # Clone the repository
