@@ -8,7 +8,7 @@ ALGO_FULL_NAME: dict[str, str] = {
         "SIFT": "Scale-Invariant Feature Transform"
         } 
 
-MAX_DIMENSION = 1024  # configurable constant at top of file
+MAX_DIMENSION = 1024  # configurable constant to resize large images 
 
 def _resize_if_needed(img: Image.Image) -> Image.Image:
     """
