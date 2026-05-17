@@ -109,9 +109,9 @@ def main():
                 st.subheader("Parameters")
                 nfeatures: int = st.slider(
                         "nfeatures",
-                        min_value=0,
-                        max_value=1000,
-                        value=0
+                        min_value=1,
+                        max_value=200,
+                        value=1
                         )
                 contrast_threshold: float = st.slider(
                         "Contrast threshold",
