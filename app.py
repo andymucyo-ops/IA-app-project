@@ -7,6 +7,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 from metrics.metrics import compute_canny_metrics, compute_harris_metrics, compute_sift_metrics
 from processing.detectors import detect_canny, detect_harris, detect_sift
 from processing.matching import match_features
+from utils.helpers import ALGO_FULL_NAME
 from utils.visualization import draw_feature_matches, draw_heatmap, draw_heatmap_overlay, draw_keypoints, draw_response_histogram, draw_sift_heatmap, draw_sift_heatmap_overlay, draw_sift_keypoints
 from utils.image_io import load_from_sample, load_from_upload
 
@@ -135,76 +136,203 @@ def main():
     #=================================================================
     # main area 
     #=================================================================
-    if input_selector == "Upload file":
-        uploaded_image: UploadedFile | None = st.file_uploader(
-                "Uploaded image",
-                type=["jpg", "png"]
+    # Theoretical  and parameters guide expanders 
+    match algo_selector:
+        case "Harris":
+            with st.expander(f"📖 About {ALGO_FULL_NAME['Harris']}"):
+                st.markdown(
+                    "Detects **corners** — points where intensity changes significantly "
+                    "in all directions. Corners are more distinctive than edges (change "
+                    "in one direction only) or flat regions (no change), making them "
+                    "reliable landmarks for matching and tracking."
                 )
-        image_key = uploaded_image.name if uploaded_image is not None else None
-        if uploaded_image is not None:
-            input_image: np.ndarray | None = load_from_upload(uploaded_image)
-    else:
-        match algo_selector:
-            case "Harris":
-                sample_selector = st.selectbox(
-                "Sample images",
-                (
-                    "-- Choose your sample", 
-                    "Building", 
-                    "Checkerboard",
-                    )
+                st.markdown("For each pixel, Harris builds the **structure tensor** $M$ "
+                            "over a local window:")
+                st.latex(r"""
+                    M = \sum_{x,y} w(x,y)
+                    \begin{bmatrix}
+                    I_x^2 & I_x I_y \\
+                    I_x I_y & I_y^2
+                    \end{bmatrix}
+                """)
+                st.markdown(
+                    "where $I_x$, $I_y$ are the image gradients and $w$ is a Gaussian "
+                    "weighting window. The corner response score $R$ is then:"
                 )
-                image_key = sample_selector
-                match sample_selector:
-                    case "Building":
-                        input_image = load_from_sample("Building.jpeg")
-                    case "Checkerboard":
-                        input_image = load_from_sample("Checkerboard.jpg")
-                    case _:
-                        input_image = None
-   
-            case "Canny":
-                sample_selector = st.selectbox(
-                                    "Sample images",
-                                    (
-                                        "-- Choose your sample", 
-                                        "Building",
-                                        "Building 2", 
-                                        "Checkered Flag",
-                                        )
-                                    )
-                image_key = sample_selector
-                match sample_selector:
-                    case "Building":
-                        input_image = load_from_sample("Building.jpg")
-                    case "Building 2":
-                        input_image = load_from_sample("Building2.jpg")
-                    case "Checkered Flag":
-                        input_image = load_from_sample("Checkered_flag.jpg")
-                    case _:
-                        input_image = None
- 
-            case "SIFT":
-                sample_selector = st.selectbox(
-                                    "Sample images",
-                                    (
-                                        "-- Choose your sample", 
-                                        "Building",
-                                        "Building 2", 
-                                        "Checkered Flag",
-                                        )
-                                    )
-                image_key = sample_selector
-                match sample_selector:
-                    case "Building":
-                        input_image = load_from_sample("Building.jpg")
-                    case "Building 2":
-                        input_image = load_from_sample("Building2.jpg")
-                    case "Checkered Flag":
-                        input_image = load_from_sample("Checkered_flag.jpg")
-                    case _:
-                        input_image = None
-    
+                st.latex(r"R = \det(M) - k \cdot (\text{tr}(M))^2")
+                st.markdown(
+                    "- $R \gg 0$ → **corner**\n"
+                    "- $R \ll 0$ → **edge**\n"
+                    "- $|R| \\approx 0$ → **flat region**"
+                )
+
+            with st.expander("🎛️ Parameter guide"):
+                st.markdown(
+                    "- **Block size** — neighbourhood window size per pixel. "
+                    "Larger = smoother, less sensitive to noise, misses fine corners.\n"
+                    "- **ksize** — Sobel kernel size for gradient computation (must be odd). "
+                    "Larger = smoother gradients, less precise localisation.\n"
+                    "- **k** — sensitivity coefficient in the $R$ formula. "
+                    "Higher = fewer but more confident corners. Typical range: 0.04–0.06.\n"
+                    "- **Threshold ratio** — fraction of max response used as cutoff. "
+                    "Increase to keep only the strongest corners.\n"
+                    "- **Radius** — display size of drawn circles. Visual only, does not affect detection."
+                )
+
+        case "Canny":
+            with st.expander(f"📖 About {ALGO_FULL_NAME['Canny']}"):
+                st.markdown(
+                    "Detects **edges** — boundaries between regions of different intensity. "
+                    "Canny is a multi-stage pipeline designed to find the strongest, "
+                    "thinnest edges while suppressing noise, making it one of the most "
+                    "widely used edge detectors in computer vision."
+                )
+                st.markdown("**Step 1 — Gaussian blur**: smooths the image to reduce noise "
+                            "before gradient computation. Controlled by $\\sigma$:")
+                st.latex(r"G(x,y) = \frac{1}{2\pi\sigma^2} e^{-\frac{x^2+y^2}{2\sigma^2}}")
+                st.markdown("**Step 2 — Gradient magnitude**: Sobel filters compute intensity "
+                            "change in $x$ and $y$ directions:")
+                st.latex(r"\|\nabla I\| = \sqrt{G_x^2 + G_y^2}")
+                st.markdown(
+                    "**Step 3 — Non-maximum suppression**: thins edges to single-pixel width "
+                    "by keeping only local gradient maxima along the gradient direction.\n\n"
+                    "**Step 4 — Hysteresis thresholding**: two thresholds determine final edges — "
+                    "pixels above $T_{high}$ are strong edges, pixels between $T_{low}$ and "
+                    "$T_{high}$ are kept only if connected to a strong edge. "
+                    "Pixels below $T_{low}$ are discarded."
+                )
+
+            with st.expander("🎛️ Parameter guide"):
+                st.markdown(
+                    "- **Sigma** ($\\sigma$) — controls Gaussian blur strength before edge detection. "
+                    "Increase for noisy images; decrease to preserve fine detail.\n"
+                    "- **Low threshold** — lower bound of the hysteresis window. "
+                    "Decrease to recover more weak edges connected to strong ones.\n"
+                    "- **High threshold** — upper bound of the hysteresis window. "
+                    "Increase to keep only the strongest, most confident edges. "
+                    "A ratio of $T_{high} / T_{low} \\approx 2$–$3$ is generally recommended.\n"
+                    "- **Pipeline step toggle** — use the radio buttons in the output area "
+                    "to step through each stage of the pipeline and observe its effect."
+                )
+        case "SIFT":
+            with st.expander(f"📖 About {ALGO_FULL_NAME['SIFT']}"):
+                st.markdown(
+                    "Detects and describes **keypoints** — distinctive local features that "
+                    "remain recognisable across changes in scale, rotation, and illumination. "
+                    "Unlike Harris (corners only) or Canny (edges only), SIFT produces a full "
+                    "**detection + description** pipeline, making it directly usable for "
+                    "image matching and registration."
+                )
+                st.markdown(
+                    "**Step 1 — Scale-space extrema detection**: the image is convolved with "
+                    "Gaussians at increasing scales. Differences of Gaussians (DoG) approximate "
+                    "the Laplacian and reveal blob-like structures at each scale:"
+                )
+                st.latex(r"D(x,y,\sigma) = G(x,y,k\sigma) * I(x,y) - G(x,y,\sigma) * I(x,y)")
+                st.markdown(
+                    "Keypoints are localised at **extrema** (minima and maxima) of $D$ across "
+                    "scale and space."
+                )
+                st.markdown(
+                    "**Step 2 — Keypoint filtering**: low-contrast candidates and responses "
+                    "along edges are discarded using the contrast threshold and edge threshold.\n\n"
+                    "**Step 3 — Orientation assignment**: a dominant gradient orientation is "
+                    "computed for each keypoint from its local neighbourhood, giving SIFT "
+                    "**rotation invariance**.\n\n"
+                    "**Step 4 — Descriptor computation**: a 128-dimensional histogram of "
+                    "gradient orientations is built around each keypoint, forming a compact "
+                    "and distinctive fingerprint used for matching."
+                )
+
+            with st.expander("🎛️ Parameter guide"):
+                st.markdown(
+                    "- **nfeatures** — maximum number of keypoints to retain. "
+                    "Set to 0 for no limit. Reduce to keep only the strongest features "
+                    "and speed up computation.\n"
+                    "- **Contrast threshold** — filters out low-contrast keypoints. "
+                    "Increase to keep only highly distinctive features; "
+                    "decrease to detect more keypoints in low-contrast regions.\n"
+                    "- **Edge threshold** — filters out keypoints localised along edges "
+                    "rather than corners. Increase to be more permissive; "
+                    "decrease to reject more edge responses.\n"
+                    "- **Sigma** ($\\sigma$) — Gaussian blur applied to the input before "
+                    "scale-space construction. Higher values assume more pre-existing blur "
+                    "in the image. Default 1.6 is optimal for most images.\n"
+                    "- **Matching tab** — upload a second image to see SIFT descriptors "
+                    "matched across the two views. Adjust max matches with the slider."
+                )
+
+            # Image input
+            if input_selector == "Upload file":
+                uploaded_image: UploadedFile | None = st.file_uploader(
+                        "Uploaded image",
+                        type=["jpg", "png"]
+                        )
+                image_key = uploaded_image.name if uploaded_image is not None else None
+                if uploaded_image is not None:
+                    input_image: np.ndarray | None = load_from_upload(uploaded_image)
+            else:
+                match algo_selector:
+                    case "Harris":
+                        sample_selector = st.selectbox(
+                        "Sample images",
+                        (
+                            "-- Choose your sample", 
+                            "Building", 
+                            "Checkerboard",
+                            )
+                        )
+                        image_key = sample_selector
+                        match sample_selector:
+                            case "Building":
+                                input_image = load_from_sample("Building.jpeg")
+                            case "Checkerboard":
+                                input_image = load_from_sample("Checkerboard.jpg")
+                            case _:
+                                input_image = None
+           
+                    case "Canny":
+                        sample_selector = st.selectbox(
+                                            "Sample images",
+                                            (
+                                                "-- Choose your sample", 
+                                                "Building",
+                                                "Building 2", 
+                                                "Checkered Flag",
+                                                )
+                                            )
+                        image_key = sample_selector
+                        match sample_selector:
+                            case "Building":
+                                input_image = load_from_sample("Building.jpg")
+                            case "Building 2":
+                                input_image = load_from_sample("Building2.jpg")
+                            case "Checkered Flag":
+                                input_image = load_from_sample("Checkered_flag.jpg")
+                            case _:
+                                input_image = None
+         
+                    case "SIFT":
+                        sample_selector = st.selectbox(
+                                            "Sample images",
+                                            (
+                                                "-- Choose your sample", 
+                                                # "Building",
+                                                "Building 2", 
+                                                # "Checkered Flag",
+                                                )
+                                            )
+                        image_key = sample_selector
+                        match sample_selector:
+                            case "Building":
+                                input_image = load_from_sample("Building.jpg")
+                            case "Building 2":
+                                input_image = load_from_sample("Building2.jpg")
+                            case "Checkered Flag":
+                                input_image = load_from_sample("Checkered_flag.jpg")
+                            case _:
+                                input_image = None
+            
     #=================================================================
     # Image display and processing
     #=================================================================

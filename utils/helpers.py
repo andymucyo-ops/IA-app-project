@@ -2,6 +2,11 @@ from time import time
 import numpy as np
 from PIL import Image
 
+ALGO_FULL_NAME: dict[str, str] = {
+        "Harris": "Harris Corner Detector",
+        "Canny" : "Canny Edges Detector",
+        "SIFT": "Scale-Invariant Feature Transform"
+        } 
 
 MAX_DIMENSION = 1024  # configurable constant at top of file
 
