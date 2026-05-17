@@ -40,7 +40,7 @@ def main():
         st.subheader("Input selection")
         input_selector = st.radio(
                                 "Image input",
-                                ("Upload file", "Sample images"),
+                                ("Sample images", "Upload file"),
                                 label_visibility="collapsed"
                                 )
         st.subheader("Detection algorithm")
@@ -136,7 +136,7 @@ def main():
     #=================================================================
     # main area 
     #=================================================================
-    # Theoretical  and parameters guide expanders 
+    # Theoretical and parameters guide expanders 
     match algo_selector:
         case "Harris":
             with st.expander(f"📖 About {ALGO_FULL_NAME['Harris']}"):
@@ -262,77 +262,78 @@ def main():
                     "matched across the two views. Adjust max matches with the slider."
                 )
 
-            # Image input
-            if input_selector == "Upload file":
-                uploaded_image: UploadedFile | None = st.file_uploader(
-                        "Uploaded image",
-                        type=["jpg", "png"]
+        # Image input
+    match input_selector:
+        case "Upload file":
+            uploaded_image: UploadedFile | None = st.file_uploader(
+                    "Uploaded image",
+                    type=["jpg", "png"]
+                    )
+            image_key = uploaded_image.name if uploaded_image is not None else None
+            if uploaded_image is not None:
+                input_image: np.ndarray | None = load_from_upload(uploaded_image)
+        case "Sample images": 
+            match algo_selector:
+                case "Harris":
+                    sample_selector = st.selectbox(
+                    "Sample images",
+                    (
+                        "-- Choose your sample", 
+                        "Building", 
+                        "Checkerboard",
                         )
-                image_key = uploaded_image.name if uploaded_image is not None else None
-                if uploaded_image is not None:
-                    input_image: np.ndarray | None = load_from_upload(uploaded_image)
-            else:
-                match algo_selector:
-                    case "Harris":
-                        sample_selector = st.selectbox(
-                        "Sample images",
-                        (
-                            "-- Choose your sample", 
-                            "Building", 
-                            "Checkerboard",
-                            )
-                        )
-                        image_key = sample_selector
-                        match sample_selector:
-                            case "Building":
-                                input_image = load_from_sample("Building.jpeg")
-                            case "Checkerboard":
-                                input_image = load_from_sample("Checkerboard.jpg")
-                            case _:
-                                input_image = None
-           
-                    case "Canny":
-                        sample_selector = st.selectbox(
-                                            "Sample images",
-                                            (
-                                                "-- Choose your sample", 
-                                                "Building",
-                                                "Building 2", 
-                                                "Checkered Flag",
-                                                )
+                    )
+                    image_key = sample_selector
+                    match sample_selector:
+                        case "Building":
+                            input_image = load_from_sample("Building.jpeg")
+                        case "Checkerboard":
+                            input_image = load_from_sample("Checkerboard.jpg")
+                        case _:
+                            input_image = None
+       
+                case "Canny":
+                    sample_selector = st.selectbox(
+                                        "Sample images",
+                                        (
+                                            "-- Choose your sample", 
+                                            "Building",
+                                            "Building 2", 
+                                            "Checkered Flag",
                                             )
-                        image_key = sample_selector
-                        match sample_selector:
-                            case "Building":
-                                input_image = load_from_sample("Building.jpg")
-                            case "Building 2":
-                                input_image = load_from_sample("Building2.jpg")
-                            case "Checkered Flag":
-                                input_image = load_from_sample("Checkered_flag.jpg")
-                            case _:
-                                input_image = None
-         
-                    case "SIFT":
-                        sample_selector = st.selectbox(
-                                            "Sample images",
-                                            (
-                                                "-- Choose your sample", 
-                                                # "Building",
-                                                "Building 2", 
-                                                # "Checkered Flag",
-                                                )
+                                        )
+                    image_key = sample_selector
+                    match sample_selector:
+                        case "Building":
+                            input_image = load_from_sample("Building.jpg")
+                        case "Building 2":
+                            input_image = load_from_sample("Building2.jpg")
+                        case "Checkered Flag":
+                            input_image = load_from_sample("Checkered_flag.jpg")
+                        case _:
+                            input_image = None
+     
+                case "SIFT":
+                    sample_selector = st.selectbox(
+                                        "Sample images",
+                                        (
+                                            "-- Choose your sample", 
+                                            # "Building",
+                                            "Building 2", 
+                                            # "Checkered Flag",
                                             )
-                        image_key = sample_selector
-                        match sample_selector:
-                            case "Building":
-                                input_image = load_from_sample("Building.jpg")
-                            case "Building 2":
-                                input_image = load_from_sample("Building2.jpg")
-                            case "Checkered Flag":
-                                input_image = load_from_sample("Checkered_flag.jpg")
-                            case _:
-                                input_image = None
-            
+                                        )
+                    image_key = sample_selector
+                    match sample_selector:
+                        case "Building":
+                            input_image = load_from_sample("Building.jpg")
+                        case "Building 2":
+                            input_image = load_from_sample("Building2.jpg")
+                        case "Checkered Flag":
+                            input_image = load_from_sample("Checkered_flag.jpg")
+                        case _:
+                            input_image = None
+    
     #=================================================================
     # Image display and processing
     #=================================================================
