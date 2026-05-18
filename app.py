@@ -32,6 +32,8 @@ def main():
     sift_descriptors = None
     metrics = None
     exec_time = 0.0
+    second_image = None
+    second_image_upload = None
 
     #=================================================================
     # sidebar
@@ -478,7 +480,8 @@ def main():
                 if input_image is not None:
                     match input_selector:
                         case "Upload file":
-                            st.info("upload a second image to see feature matching")
+                            if second_image_upload is None:
+                                st.info("upload a second image to see feature matching")
                             second_image_upload: UploadedFile | None = st.file_uploader(
                             "Uploaded image",
                             type=["jpg", "png"],
