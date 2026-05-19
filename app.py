@@ -281,16 +281,19 @@ def main():
                     "Sample images",
                     (
                         "-- Choose your sample", 
-                        "Building", 
+                        "Building facade", 
                         "Checkerboard",
+                        "Checkered floor"
                         )
                     )
                     image_key = sample_selector
                     match sample_selector:
-                        case "Building":
-                            input_image = load_from_sample("Building.jpeg")
+                        case "Building facade":
+                            input_image = load_from_sample("building-facade.jpg")
                         case "Checkerboard":
                             input_image = load_from_sample("Checkerboard.jpg")
+                        case "Checkered floor":
+                            input_image = load_from_sample("Checkered_pattern.jpg")
                         case _:
                             input_image = None
        
@@ -320,19 +323,16 @@ def main():
                                         "Sample images",
                                         (
                                             "-- Choose your sample", 
-                                            # "Building",
-                                            "Building 2", 
-                                            # "Checkered Flag",
+                                            "Building", 
+                                            "Portrait"
                                             )
                                         )
                     image_key = sample_selector
                     match sample_selector:
                         case "Building":
-                            input_image = load_from_sample("Building.jpg")
-                        case "Building 2":
                             input_image = load_from_sample("Building2.jpg")
-                        case "Checkered Flag":
-                            input_image = load_from_sample("Checkered_flag.jpg")
+                        case "Portrait":
+                            input_image = load_from_sample("portrait.jpg")
                         case _:
                             input_image = None
     
@@ -480,26 +480,38 @@ def main():
                 if input_image is not None:
                     match input_selector:
                         case "Upload file":
-                            if second_image_upload is None:
-                                st.info("upload a second image to see feature matching")
                             second_image_upload: UploadedFile | None = st.file_uploader(
                             "Uploaded image",
                             type=["jpg", "png"],
                             key="second_image"
                             )
 
+                            if second_image_upload is None:
+                                st.info("upload a second image to see feature matching")
                             if second_image_upload is not None and sift_keypoints is not None:
                                 second_image: np.ndarray = load_from_upload(second_image_upload)
                         case "Sample images":
-                            matching_sample = st.selectbox(
-                                    "distorted sample image to be matched",
-                                    ("Building2 cropped")
-                                    )
-                            match matching_sample:
-                                case "Building2 cropped":
-                                    second_image = load_from_sample(
-                                            "sift_matching/cropped_building2.jpg"
+                            match sample_selector:
+                                case "Building":
+                                    matching_sample = st.selectbox(
+                                            "distorted sample image to be matched",
+                                            ("Building cropped and rotate")
                                             )
+                                    match matching_sample:
+                                        case "Building cropped and rotate":
+                                            second_image = load_from_sample(
+                                                    "sift_matching/cropped_building2.jpg"
+                                                    )
+                                case "Portrait":
+                                    matching_sample = st.selectbox(
+                                            "distorted sample image to be matched",
+                                            ("Cropped")
+                                            )
+                                    match matching_sample:
+                                        case "Cropped":
+                                            second_image = load_from_sample(
+                                                    "sift_matching/cropped-portrait.jpg"
+                                                    )
                     if second_image is not None:
                         (sift_keypoints2, sift_descriptors2), _ = detect_sift(
                                 second_image, 
