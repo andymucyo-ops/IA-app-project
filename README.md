@@ -44,18 +44,6 @@ The app will open at `http://localhost:8501`.
 
 ***
 
-## Hugging Face Space
-
-**Live demo**: _URL to be added after deployment_
-
-***
-
-## Screenshots
-
-_Screenshots to be added after deployment._
-
-***
-
 ## Known Limitations
 
 - **Large image handling**: images are resized to a maximum dimension before processing to keep the app responsive. Very high-resolution uploads may lose fine detail after resizing.
